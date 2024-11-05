@@ -1,0 +1,112 @@
+using System;
+using System.IO.Ports;
+
+namespace proyecto
+{
+    class Program
+    {
+        private static SerialPort _serialPort;
+
+        static void Main(string[] args)
+        {
+            InitializeSerialPort();
+
+            Console.WriteLine("Presiona Enter para conectar al puerto...");
+            Console.ReadLine();
+
+            try
+            {
+                // Intentar abrir el puerto
+                _serialPort.Open();
+                Console.WriteLine("Conectado al puerto. Leyendo datos...");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error al abrir el puerto serial: " + ex.Message);
+                return;
+            }
+
+            Console.WriteLine("Presiona Enter para desconectar y salir...");
+            Console.ReadLine();
+
+            // Cerrar el puerto serial al finalizar
+            if (_serialPort.IsOpen)
+                _serialPort.Close();
+
+            Console.WriteLine("Desconectado.");
+        }
+
+        private static void InitializeSerialPort()
+        {
+            // Configuración inicial del puerto serial
+            _serialPort = new SerialPort
+            {
+                PortName = "COM7",  // Especificar el puerto aquí
+                BaudRate = 9600,
+                Parity = Parity.None,
+                StopBits = StopBits.One,
+                DataBits = 8,
+                Handshake = Handshake.None
+            };
+            _serialPort.DataReceived += DataReceivedHandler;  // Evento para recibir datos
+
+            Console.WriteLine("Configurado para el puerto COM7.");
+        }
+
+        private static void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)
+        {
+            // Manejo de datos recibidos
+            try
+            {
+                string data = _serialPort.ReadLine().Trim();
+                Console.WriteLine("Temperatura recibida: " + data + " °C");
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Error al leer los datos.");
+            }
+        }
+    }
+}
+
+
+from microbit import *
+import radio
+import utime
+
+# Inicializar la radio
+radio.on()
+radio.config(channel=7)  # Puedes elegir cualquier canal entre 0 y 83
+
+while True:
+    temp = temperature()
+    mensaje = "TEMP:" + str(temp)
+    radio.send(mensaje)
+    display.show(str(temp))
+    sleep(1000)  # Espera 1 segundo antes de la siguiente lectura
+    display.clear()
+
+
+
+
+from microbit import *
+import radio
+
+# Inicializar la radio
+radio.on()
+radio.config(channel=7)  # Debe coincidir con el canal del transmisor
+
+while True:
+    mensaje = radio.receive()
+    if mensaje:
+        if mensaje.startswith("TEMP:"):
+            temp = mensaje.split(":")[1]
+            uart.init(baudrate=9600)
+            uart.write(temp + "\n")
+            display.show(str(temp))
+            sleep(1000)
+            display.clear()
+    sleep(100)  # Pequeña pausa para evitar sobrecarga
+
+
+
